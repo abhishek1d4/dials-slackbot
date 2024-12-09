@@ -54,10 +54,9 @@ def format_finding(finding):
 
 def split(bundle):
     parts = bundle.split('/')
-
-# Get the last element, or the second-last if the last is empty
-     last_variable = parts[-1] if parts[-1] else parts[-2]
+    last_variable = parts[-1] if parts[-1] else parts[-2]
     return parts 
+
 def result_summary(bundle, log_bundle_id, say, ts):
     headers = {
     "log_bundle_id": log_bundle_id  # Add the log_bundle_id header
@@ -70,13 +69,13 @@ def result_summary(bundle, log_bundle_id, say, ts):
         panacea_findings = summary_response.get("panacea_findings", [])
 
         if len(panacea_findings) == 0:
-            say(f"No match found for `{bundle.split('/')[-1]}`\n", thread_ts=ts)
+            say(f"No match found for `{split(bundle)}`\n", thread_ts=ts)
         else:
             findings_text = "\n\n".join(format_finding(finding) for finding in panacea_findings)
-            say(f"\n`Match for {bundle.split('/')[-1]}:`\n\n{findings_text}", thread_ts=ts)
+            say(f"\n`Match for {split(bundle)}:`\n\n{findings_text}", thread_ts=ts)
 
     except requests.RequestException as e:
-        say(f"Failed to fetch summary for `{bundle.split('/')[-1]}`. Error: {str(e)}", thread_ts=ts)
+        say(f"Failed to fetch summary for `{split(bundle)}`. Error: {str(e)}", thread_ts=ts)
       
 
 def analyze_logs(entry,say,ts):
@@ -93,7 +92,7 @@ def analyze_logs(entry,say,ts):
         analyze_response = requests.post(ANALYZE_URL, json=payload, verify=False)
         analyze_response.raise_for_status()
         analyze_response=analyze_response.json()
-        time.sleep(15)
+        time.sleep(15)# sleep set here otherwise job status api get called with log_bundle_id even before it is entered in queue and gives 404 error 
         if analyze_response.get("status")=="failure" and analyze_response.get("error_msg")!="Log bundle already exists":
             say(f'Log analysis for {entry["remote_log_bundle_path"].split("/")[-1]} failed with error: {analyze_response.get("error_msg")}',thread_ts=ts)
             return
@@ -136,8 +135,6 @@ def panacea_main(log_type,log_bundle_path,say,ts):
         'log_type': log_type
     }
     say(f"Panacea analysis started" ,thread_ts=ts)
-
-    
     try:
         metadata_response = requests.post(METADATA_URL, json=metadata_data, verify=False)
         metadata_response.raise_for_status()
@@ -156,7 +153,7 @@ def panacea_main(log_type,log_bundle_path,say,ts):
         say(f"Below {len(paths)} log bundles have been identified:",thread_ts=ts)
        
         for path in paths:
-            say(f"`{path.get('remote_log_bundle_path')}`\n",thread_ts=ts)
+            say(f"`{split(path.get('remote_log_bundle_path'))}`\n",thread_ts=ts)
         
         analyze_logs_with_args = partial(analyze_logs, say=say, ts=ts)
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:  
