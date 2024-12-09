@@ -7,17 +7,18 @@ import warnings
 from urllib3.exceptions import InsecureRequestWarning
 from functools import partial
 
+
 PROD_URL = "10.113.24.26"
-# for prod : use https:/10.113.24.26/
-DEV_URL = "10.113.24.33:1999"
+DEV_URL = "10.113.24.33"
 
-host=DEV_URL
+host=f'https://{DEV_URL}'
+api_path=f'{host}/api/load-balancer/logs'
 
-METADATA_URL = f'http://{host}/api/load-balancer/logs/metadata'
-ANALYZE_URL = f'http://{host}/api/load-balancer/logs/analyze'
-JOB_STATUS_URL = f'http://{host}/api/load-balancer/logs/job_status'
-SUMMARY_URL=f'http://10.113.24.33:1998/api/components_issues' # todo : add headers in this 
-REPORT_URL=f'http://10.113.24.33/dashboard'
+METADATA_URL = f'{api_path}/metadata'
+ANALYZE_URL = f'{api_path}/analyze'
+JOB_STATUS_URL = f'{api_path}/job_status'
+SUMMARY_URL=f'{host}/api/components_issues'
+REPORT_URL=f'{host}/dashboard'
 POLL_TIMEOUT = 20 * 60
 USER_EMAIL = "abhishek.bisla@nutanix.com"
 
@@ -55,11 +56,11 @@ def format_finding(finding):
 def split(bundle):
     parts = bundle.split('/')
     last_variable = parts[-1] if parts[-1] else parts[-2]
-    return parts 
+    return last_variable 
 
 def result_summary(bundle, log_bundle_id, say, ts):
     headers = {
-    "log_bundle_id": log_bundle_id  # Add the log_bundle_id header
+    "log_bundle_id": str(log_bundle_id)  # Add the log_bundle_id header
     }
     summary_url = f"{SUMMARY_URL}?log_bundle_id={log_bundle_id}&component_name=&issue_provider=panacea_findings"
     try:
@@ -117,7 +118,7 @@ def analyze_logs(entry,say,ts):
                 result_summary(entry['remote_log_bundle_path'],log_bundle_id,say,ts)
                 report_url=REPORT_URL+f'?log_bundle_id={log_bundle_id}'
                 print(f'Report url for {entry["remote_log_bundle_path"].split("/")[-1]} is ',report_url)
-                say(f'`Report url for {entry["remote_log_bundle_path"].split("/")[-1]}:`{report_url} \n', thread_ts=ts)
+                say(f'`Report for {entry["remote_log_bundle_path"].split("/")[-1]}:`{report_url} \n', thread_ts=ts)
                 break
             elif poll_response.get("job_status") == "waiting":
                 say('Polling',thread_ts=ts) 
